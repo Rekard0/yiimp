@@ -181,7 +181,7 @@ void coind_init(YAAMP_COIND *coind)
 
 	sprintf(params, "[\"%s\"]", account);
 
-	json_value *json = rpc_call(&coind->rpc, "getaccountaddress", params);
+	json_value *json = rpc_call(&coind->rpc, "getaddressesbylabel", params);
 	if(!json)
 	{
 		json = rpc_call(&coind->rpc, "getaddressesbyaccount", params);
@@ -191,7 +191,7 @@ void coind_init(YAAMP_COIND *coind)
 				json = json->u.object.values[0].value;
 		}
 		if (!json) {
-			stratumlog("ERROR getaccountaddress %s\n", coind->name);
+			stratumlog("ERROR getaddressesbyaccount s %s\n", coind->name);
 			return;
 		}
 	}
@@ -201,7 +201,7 @@ void coind_init(YAAMP_COIND *coind)
 	}
 	else {
 		strcpy(coind->wallet, "");
-		stratumlog("ERROR getaccountaddress %s\n", coind->name);
+		stratumlog("ERROR getaddressesbylabel %s\n", coind->name);
 	}
 
 	json_value_free(json);
