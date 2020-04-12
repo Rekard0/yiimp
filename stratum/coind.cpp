@@ -201,7 +201,7 @@ void coind_init(YAAMP_COIND *coind)
 	}
 	else {
 		strcpy(coind->wallet, "");
-		stratumlog("ERROR getaddressesbylabel %s\n", coind->name);
+		stratumlog("ERROR getaddressesbylabel %s - param = %s - json = %s \n", coind->name, params, json);
 	}
 
 	json_value_free(json);
