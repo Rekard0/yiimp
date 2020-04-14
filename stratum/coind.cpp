@@ -1,5 +1,7 @@
 
 #include "stratum.h"
+#include <iostream>
+#include <string>
 
 void coind_error(YAAMP_COIND *coind, const char *s)
 {
@@ -115,11 +117,17 @@ bool coind_validate_address(YAAMP_COIND *coind)
 	sprintf(params, "[\"%s\"]", coind->wallet);
 
 	json_value *json;
-	bool getaddressinfo = ((strcmp(coind->symbol,"DGB") == 0) || (strcmp(coind->symbol2, "DGB") == 0));
-	if(getaddressinfo)
+	bool getaddressinfo = ((strcmp(coind->symbol,"DGB") == 0) || (strcmp(coind->symbol2, "DGB") == 0) || 
+							(strcmp(coind->symbol,"BTC") == 0) || (strcmp(coind->symbol2, "BTC") == 0) ||
+							(strcmp(coind->symbol,"MBIT") == 0) || (strcmp(coind->symbol2, "MBIT") == 0));
+	if(getaddressinfo) {
+		stratumlog("using rpc getaddressinfo. with params = %s\n", params);
 		json = rpc_call(&coind->rpc, "getaddressinfo", params);
-	else
+	}
+	else {
+		stratumlog("using rpc validateaddress. with params = %s\n", params);
 		json = rpc_call(&coind->rpc, "validateaddress", params);
+	}
 	if(!json) return false;
 
 	json_value *json_result = json_get_object(json, "result");
@@ -181,7 +189,23 @@ void coind_init(YAAMP_COIND *coind)
 
 	sprintf(params, "[\"%s\"]", account);
 
-	json_value *json = rpc_call(&coind->rpc, "getaddressesbylabel", params);
+	bool isV18 = ((strcmp(coind->symbol,"MBIT") == 0) || (strcmp(coind->symbol2, "MBIT") == 0));
+	if(isV18){
+		json_value *json = rpc_call(&coind->rpc, "getaddressesbylabel", params);
+
+		if (json->u.object.values[0].name_length > 0) {
+			auto mychar = json->u.object.values[0].name;
+			// string s(mychar);
+			// strcpy(coind->wallet, mychar);
+			stratumlog("json = %s",json->u.string.ptr);
+		}
+		else {
+			strcpy(coind->wallet, "");
+			stratumlog("ERROR getaddressesbylabel %s\n", coind->name);
+		}
+		json_value_free(json);
+	}else {
+	json_value *json = rpc_call(&coind->rpc, "getaccountaddress", params);
 	if(!json)
 	{
 		json = rpc_call(&coind->rpc, "getaddressesbyaccount", params);
@@ -191,20 +215,20 @@ void coind_init(YAAMP_COIND *coind)
 				json = json->u.object.values[0].value;
 		}
 		if (!json) {
-			stratumlog("ERROR getaddressesbyaccount s %s\n", coind->name);
+			stratumlog("ERROR getaccountaddress %s\n", coind->name);
 			return;
 		}
 	}
 
-	if (json->u.object.values[0].value->type == json_string) {
-		strcpy(coind->wallet, json->u.object.values[0].value->u.string.ptr);
+		if (json->u.object.values[0].value->type == json_string) {
+			strcpy(coind->wallet, json->u.object.values[0].value->u.string.ptr);
+		}
+		else {
+			strcpy(coind->wallet, "");
+			stratumlog("ERROR getaccountaddress %s\n", coind->name);
+		}
+		json_value_free(json);
 	}
-	else {
-		strcpy(coind->wallet, "");
-		stratumlog("ERROR getaddressesbylabel %s - param = %s - json = %s \n", coind->name, params, json);
-	}
-
-	json_value_free(json);
 
 	coind_validate_address(coind);
 	if (strlen(coind->wallet)) {
